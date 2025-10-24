@@ -90,8 +90,20 @@ aws-bucket-policy my-bucket full-access john-doe
 # Public read access
 aws-bucket-policy my-bucket public-read
 
+# Ceph/RGW compatible policies
+aws-bucket-policy my-bucket ceph-read-write
+aws-bucket-policy my-bucket ceph-read-only
+
 # Generate custom template
 aws-bucket-policy my-bucket custom
+```
+
+### Get Bucket Policy
+
+View the current bucket policy:
+
+```bash
+aws-get-bucket-policy my-bucket
 ```
 
 ### Manage User Policies

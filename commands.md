@@ -32,3 +32,26 @@ aws iam create-access-key --user-name root_frans_test_subuser_1
 ```
 
 
+# Create user
+aws-create-user john-doe
+
+# Switch profiles
+aws-switch-profile john-doe
+
+# Create bucket policy
+aws-bucket-policy bda-test-bucket read-write john-doe
+
+# Attach managed policy
+aws-attach-policy john-doe arn:aws:iam::aws:policy/AmazonS3FullAccess
+
+AWS management tools loaded!
+Available commands:
+  aws-create-user <username> [profile]  - Create IAM user and configure profile
+  aws-delete-user <username> [profile]  - Delete IAM user and remove profile
+  aws-switch-profile <profile>          - Switch to different AWS profile
+  aws-bucket-policy <bucket> <type>     - Create and apply S3 bucket policy
+  aws-current                           - Show current AWS profile
+  aws-profiles                          - List all configured profiles
+  aws-whoami                            - Show current AWS identity
+  aws-attach-policy <user> <arn>       - Attach policy to user
+  aws-list-user-policies <user>        - List user's policies

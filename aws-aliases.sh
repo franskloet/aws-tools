@@ -19,6 +19,9 @@ aws-switch-profile() {
 # Alias to create bucket policies
 alias aws-bucket-policy="$AWS_SCRIPTS_DIR/aws-create-bucket-policy.sh"
 
+# Alias to get bucket policy
+alias aws-get-bucket-policy="$AWS_SCRIPTS_DIR/aws-get-bucket-policy.sh"
+
 # Quick alias to show current AWS profile
 alias aws-current='echo "Current AWS Profile: ${AWS_PROFILE:-default}"'
 
@@ -64,6 +67,7 @@ echo "  aws-create-user <username> [profile]  - Create IAM user and configure pr
 echo "  aws-delete-user <username> [profile]  - Delete IAM user and remove profile"
 echo "  aws-switch-profile <profile>          - Switch to different AWS profile"
 echo "  aws-bucket-policy <bucket> <type>     - Create and apply S3 bucket policy"
+echo "  aws-get-bucket-policy <bucket>        - Get current bucket policy"
 echo "  aws-current                           - Show current AWS profile"
 echo "  aws-profiles                          - List all configured profiles"
 echo "  aws-whoami                            - Show current AWS identity"
