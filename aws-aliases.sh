@@ -22,6 +22,9 @@ alias aws-bucket-policy="$AWS_SCRIPTS_DIR/aws-create-bucket-policy.sh"
 # Alias to get bucket policy
 alias aws-get-bucket-policy="$AWS_SCRIPTS_DIR/aws-get-bucket-policy.sh"
 
+# Alias to delete bucket policy
+alias aws-delete-bucket-policy="$AWS_SCRIPTS_DIR/aws-delete-bucket-policy.sh"
+
 # Aliases for group management
 alias aws-create-group="$AWS_SCRIPTS_DIR/aws-create-group.sh"
 alias aws-add-user-to-group="$AWS_SCRIPTS_DIR/aws-add-user-to-group.sh"
@@ -162,6 +165,7 @@ echo "  aws-delete-user <username> [profile]  - Delete IAM user and remove profi
 echo "  aws-switch-profile <profile>          - Switch to different AWS profile"
 echo "  aws-bucket-policy <bucket> <type>     - Create and apply S3 bucket policy"
 echo "  aws-get-bucket-policy <bucket>        - Get current bucket policy"
+echo "  aws-delete-bucket-policy <bucket>     - Delete bucket policy"
 echo "  aws-current                           - Show current AWS profile"
 echo "  aws-profiles                          - List all configured profiles"
 echo "  aws_whoami                            - Show current AWS identity"
