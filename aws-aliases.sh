@@ -34,6 +34,7 @@ alias aws-list-group-policies="$AWS_SCRIPTS_DIR/aws-list-group-policies.sh"
 alias aws-list-bucket-group-policies="$AWS_SCRIPTS_DIR/aws-list-bucket-group-policies.sh"
 alias aws-clear-user-policies="$AWS_SCRIPTS_DIR/aws-clear-user-policies.sh"
 alias aws-clear-group-policies="$AWS_SCRIPTS_DIR/aws-clear-group-policies.sh"
+alias aws-restrict-group-to-bucket="$AWS_SCRIPTS_DIR/aws-restrict-group-to-bucket.sh"
 
 # Quick alias to show current AWS profile
 alias aws-current='echo "Current AWS Profile: ${AWS_PROFILE:-default}"'
@@ -56,21 +57,28 @@ aws_whoami() {
     echo "Testing S3 access..."
     echo ""
     
+    # First try listing all buckets (for users with broad access)
     if aws s3 ls 2>/dev/null >/dev/null; then
-        echo "✓ S3 access confirmed with profile: ${AWS_PROFILE:-default}"
-        # Show config details
-        if [ -f "$HOME/.aws/config" ]; then
-            local PROFILE_SECTION="${AWS_PROFILE:-default}"
-            if [ "$PROFILE_SECTION" != "default" ]; then
-                PROFILE_SECTION="profile $PROFILE_SECTION"
-            fi
-            echo ""
-            echo "Configuration:"
-            grep -A 5 "^\[$PROFILE_SECTION\]" "$HOME/.aws/config" 2>/dev/null | grep -E "(endpoint_url|region)" | sed 's/^/  /'
-        fi
+        echo "✓ S3 access confirmed (can list all buckets)"
+        echo "  Profile: ${AWS_PROFILE:-default}"
     else
-        echo "✗ S3 access denied or credentials invalid"
-        return 1
+        # User may have bucket-specific access only
+        echo "⚠ Cannot list all buckets (may have bucket-specific access only)"
+        echo "  Profile: ${AWS_PROFILE:-default}"
+        echo ""
+        echo "Note: This profile may have access to specific buckets only."
+        echo "      Use 'aws s3 ls s3://<bucket-name>' to test bucket access."
+    fi
+    
+    # Show config details
+    if [ -f "$HOME/.aws/config" ]; then
+        local PROFILE_SECTION="${AWS_PROFILE:-default}"
+        if [ "$PROFILE_SECTION" != "default" ]; then
+            PROFILE_SECTION="profile $PROFILE_SECTION"
+        fi
+        echo ""
+        echo "Configuration:"
+        grep -A 5 "^\[$PROFILE_SECTION\]" "$HOME/.aws/config" 2>/dev/null | grep -E "(endpoint_url|region)" | sed 's/^/  /'
     fi
 }
 
@@ -167,6 +175,7 @@ echo "  aws-detach-group-policy <group> <arn> - Detach policy from group"
 echo "  aws-clear-group-policies <group>     - Remove all policies from group"
 echo "  aws-attach-group-bucket-policy <group> <bucket> [level] - Attach bucket policy to group"
 echo "  aws-detach-group-bucket-policy <group> <bucket> [level] - Detach bucket policy from group"
+echo "  aws-restrict-group-to-bucket <group> <bucket> [level] - Replace broad S3 access with bucket-specific"
 echo "  aws-list-group-policies <group>      - List all policies for a group"
 echo "  aws-list-bucket-group-policies <bucket> - List groups with access to a bucket"
 echo "  aws-add-user-to-group <user> <group> - Add user to group"

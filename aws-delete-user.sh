@@ -14,6 +14,13 @@ if [ -z "$USERNAME" ]; then
     exit 1
 fi
 
+# Prevent deletion of default user
+if [ "$USERNAME" = "default" ]; then
+    echo "ERROR: Cannot delete the 'default' user"
+    echo "This user is protected from deletion"
+    exit 1
+fi
+
 AWS_CONFIG_FILE="${AWS_CONFIG_FILE:-$HOME/.aws/config}"
 AWS_CREDENTIALS_FILE="${AWS_SHARED_CREDENTIALS_FILE:-$HOME/.aws/credentials}"
 
