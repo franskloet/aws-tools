@@ -116,6 +116,28 @@ aws-attach-policy john-doe arn:aws:iam::aws:policy/AmazonS3FullAccess
 aws-list-user-policies john-doe
 ```
 
+### Manage IAM Groups
+
+```bash
+# Create a group
+aws-create-group developers
+
+# Create a group with a policy
+aws-create-group s3-users arn:aws:iam::aws:policy/AmazonS3FullAccess
+
+# Attach policy to existing group
+aws-attach-group-policy developers arn:aws:iam::aws:policy/AmazonS3FullAccess
+
+# Add user to group
+aws-add-user-to-group john-doe developers
+
+# List all groups
+aws-list-groups
+
+# List group details and members
+aws-list-groups developers
+```
+
 ### Utility Commands
 
 ```bash

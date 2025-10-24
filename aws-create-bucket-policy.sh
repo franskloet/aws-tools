@@ -264,3 +264,24 @@ if [ -n "$ORIG_AWS_PROFILE" ]; then
 else
     unset AWS_PROFILE
 fi
+
+
+# Create a group
+aws-create-group s3-users
+
+# Create a group with a policy attached
+aws-create-group developers arn:aws:iam::aws:policy/AmazonS3FullAccess
+
+# Add users to the group
+aws-add-user-to-group john-doe s3-users
+aws-add-user-to-group alice s3-users
+
+# List all groups
+aws-list-groups
+
+# Show group details and members
+aws-list-groups s3-users
+
+
+aws-attach-group-bucket-policy data-scientists my-bucket
+aws-attach-group-bucket-policy analysts my-bucket read-only
