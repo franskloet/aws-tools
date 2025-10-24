@@ -30,6 +30,10 @@ alias aws-attach-group-bucket-policy="$AWS_SCRIPTS_DIR/aws-attach-group-bucket-p
 alias aws-detach-user-policy="$AWS_SCRIPTS_DIR/aws-detach-user-policy.sh"
 alias aws-detach-group-policy="$AWS_SCRIPTS_DIR/aws-detach-group-policy.sh"
 alias aws-detach-group-bucket-policy="$AWS_SCRIPTS_DIR/aws-detach-group-bucket-policy.sh"
+alias aws-list-group-policies="$AWS_SCRIPTS_DIR/aws-list-group-policies.sh"
+alias aws-list-bucket-group-policies="$AWS_SCRIPTS_DIR/aws-list-bucket-group-policies.sh"
+alias aws-clear-user-policies="$AWS_SCRIPTS_DIR/aws-clear-user-policies.sh"
+alias aws-clear-group-policies="$AWS_SCRIPTS_DIR/aws-clear-group-policies.sh"
 
 # Quick alias to show current AWS profile
 alias aws-current='echo "Current AWS Profile: ${AWS_PROFILE:-default}"'
@@ -73,15 +77,22 @@ aws_whoami() {
 # Function to quickly attach policy to user
 aws-attach-policy() {
     if [ -z "$1" ] || [ -z "$2" ]; then
-        echo "Usage: aws-attach-policy <username> <policy-arn>"
+        echo "Usage: aws-attach-policy <username> <policy-arn|policy-name>"
         echo "Common policies:"
-        echo "  AmazonS3FullAccess: arn:aws:iam::aws:policy/AmazonS3FullAccess"
-        echo "  AmazonS3ReadOnlyAccess: arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
+        echo "  AmazonS3FullAccess or arn:aws:iam::aws:policy/AmazonS3FullAccess"
+        echo "  AmazonS3ReadOnlyAccess or arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
         return 1
     fi
     local ORIG_PROFILE="${AWS_PROFILE:-}"
     export AWS_PROFILE=default
-    aws iam attach-user-policy --user-name "$1" --policy-arn "$2"
+    
+    # Auto-prefix policy ARN if not already an ARN
+    local POLICY_ARN="$2"
+    if [[ ! "$POLICY_ARN" =~ ^arn: ]]; then
+        POLICY_ARN="arn:aws:iam::aws:policy/$POLICY_ARN"
+    fi
+    
+    aws iam attach-user-policy --user-name "$1" --policy-arn "$POLICY_ARN"
     echo "✓ Policy attached to user $1"
     if [ -n "$ORIG_PROFILE" ]; then
         export AWS_PROFILE="$ORIG_PROFILE"
@@ -110,15 +121,22 @@ aws-list-user-policies() {
 # Function to attach policy to group
 aws-attach-group-policy() {
     if [ -z "$1" ] || [ -z "$2" ]; then
-        echo "Usage: aws-attach-group-policy <group-name> <policy-arn>"
+        echo "Usage: aws-attach-group-policy <group-name> <policy-arn|policy-name>"
         echo "Common policies:"
-        echo "  AmazonS3FullAccess: arn:aws:iam::aws:policy/AmazonS3FullAccess"
-        echo "  AmazonS3ReadOnlyAccess: arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
+        echo "  AmazonS3FullAccess or arn:aws:iam::aws:policy/AmazonS3FullAccess"
+        echo "  AmazonS3ReadOnlyAccess or arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
         return 1
     fi
     local ORIG_PROFILE="${AWS_PROFILE:-}"
     export AWS_PROFILE=default
-    aws iam attach-group-policy --group-name "$1" --policy-arn "$2"
+    
+    # Auto-prefix policy ARN if not already an ARN
+    local POLICY_ARN="$2"
+    if [[ ! "$POLICY_ARN" =~ ^arn: ]]; then
+        POLICY_ARN="arn:aws:iam::aws:policy/$POLICY_ARN"
+    fi
+    
+    aws iam attach-group-policy --group-name "$1" --policy-arn "$POLICY_ARN"
     echo "✓ Policy attached to group $1"
     if [ -n "$ORIG_PROFILE" ]; then
         export AWS_PROFILE="$ORIG_PROFILE"
@@ -127,6 +145,8 @@ aws-attach-group-policy() {
     fi
 }
 
+# Display available commands
+aws-commands() {
 echo "AWS management tools loaded!"
 echo "Available commands:"
 echo "  aws-create-user <username> [profile]  - Create IAM user and configure profile"
@@ -137,13 +157,21 @@ echo "  aws-get-bucket-policy <bucket>        - Get current bucket policy"
 echo "  aws-current                           - Show current AWS profile"
 echo "  aws-profiles                          - List all configured profiles"
 echo "  aws_whoami                            - Show current AWS identity"
-echo "  aws-attach-policy <user> <arn>       - Attach policy to user"
+echo "  aws-attach-policy <user> <arn|name>  - Attach policy to user"
 echo "  aws-detach-user-policy <user> <arn>  - Detach policy from user"
+echo "  aws-clear-user-policies <user>       - Remove all policies from user"
 echo "  aws-list-user-policies <user>        - List user's policies"
 echo "  aws-create-group <group> [arn]       - Create IAM group with optional policy"
-echo "  aws-attach-group-policy <group> <arn> - Attach policy to group"
+echo "  aws-attach-group-policy <group> <arn|name> - Attach policy to group"
 echo "  aws-detach-group-policy <group> <arn> - Detach policy from group"
+echo "  aws-clear-group-policies <group>     - Remove all policies from group"
 echo "  aws-attach-group-bucket-policy <group> <bucket> [level] - Attach bucket policy to group"
 echo "  aws-detach-group-bucket-policy <group> <bucket> [level] - Detach bucket policy from group"
+echo "  aws-list-group-policies <group>      - List all policies for a group"
+echo "  aws-list-bucket-group-policies <bucket> - List groups with access to a bucket"
 echo "  aws-add-user-to-group <user> <group> - Add user to group"
 echo "  aws-list-groups [group]              - List all groups or group details"
+}
+
+# show available commands on source
+aws-commands

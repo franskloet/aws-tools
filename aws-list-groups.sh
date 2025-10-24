@@ -12,19 +12,21 @@ if [ -z "$GROUP_NAME" ]; then
     # List all groups
     echo "IAM Groups:"
     echo ""
-    aws iam list-groups --output json | jq -r '.Groups[] | "  - \(.GroupName) (created: \(.CreateDate))"'
+    aws iam list-groups --output json | jq -r '.Groups[] | "  - \(.GroupName)" + (if .CreateDate then " (created: \(.CreateDate))" else "" end)'
 else
-    # Show specific group details
-    echo "Group: $GROUP_NAME"
+    # Show group members
+    echo "Members of group: $GROUP_NAME"
     echo ""
     
-    # Show group policies
-    echo "Attached Policies:"
-    aws iam list-attached-group-policies --group-name "$GROUP_NAME" --output json | jq -r '.AttachedPolicies[] | "  - \(.PolicyName): \(.PolicyArn)"'
+    MEMBERS=$(aws iam get-group --group-name "$GROUP_NAME" --output json 2>/dev/null | jq -r '.Users[].UserName')
     
-    echo ""
-    echo "Members:"
-    aws iam get-group --group-name "$GROUP_NAME" --output json | jq -r '.Users[] | "  - \(.UserName)"'
+    if [ -n "$MEMBERS" ]; then
+        while IFS= read -r member; do
+            echo "  - $member"
+        done <<< "$MEMBERS"
+    else
+        echo "  (no members)"
+    fi
 fi
 
 # Restore original profile
