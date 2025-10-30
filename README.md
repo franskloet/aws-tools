@@ -4,17 +4,50 @@ A collection of wrapper scripts to simplify AWS IAM user management, profile swi
 
 ## Installation
 
-1. Make scripts executable:
+### Quick Install
+
+Use the install script to automatically copy all tools to your desired location:
+
 ```bash
-chmod +x aws-create-user.sh aws-switch-profile.sh aws-create-bucket-policy.sh
+./install.sh <target-directory>
 ```
 
-2. Add to your `~/.bashrc`:
+Example:
+```bash
+./install.sh ~/s3/AWS
+```
+
+This will:
+- Copy all scripts to the target directory
+- Update the `aws-aliases.sh` file with the correct path
+- Make all scripts executable
+- Provide instructions for adding to your `~/.bashrc`
+
+Then add to your `~/.bashrc`:
 ```bash
 source ~/s3/AWS/aws-aliases.sh
 ```
 
-3. Reload your shell:
+And reload your shell:
+```bash
+source ~/.bashrc
+```
+
+### Manual Installation
+
+1. Make scripts executable:
+```bash
+chmod +x *.sh
+```
+
+2. Edit `aws-aliases.sh` and update the `AWS_SCRIPTS_DIR` variable to point to your installation directory
+
+3. Add to your `~/.bashrc`:
+```bash
+source /path/to/aws-aliases.sh
+```
+
+4. Reload your shell:
 ```bash
 source ~/.bashrc
 ```

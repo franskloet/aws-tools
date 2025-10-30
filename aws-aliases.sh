@@ -186,5 +186,8 @@ echo "  aws-add-user-to-group <user> <group> - Add user to group"
 echo "  aws-list-groups [group]              - List all groups or group details"
 }
 
-# show available commands on source
-aws-commands
+# Show available commands only once per login session
+if [ -z "$AWS_ALIASES_LOADED" ]; then
+    export AWS_ALIASES_LOADED=1
+    aws-commands
+fi
