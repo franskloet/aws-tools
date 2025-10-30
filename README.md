@@ -272,7 +272,7 @@ aws-add-user-to-group alice developers
 aws-add-user-to-group bob developers
 
 # Give alice write access to a specific bucket using bucket policy
-aws-attach-group-bucket-policy developers project-x-bucket read-write
+aws-attach-group-bucket-policy developers project-x-bucket write
 
 # Give bob additional IAM admin access (inline)
 aws-attach-policy bob arn:aws:iam::aws:policy/IAMFullAccess
