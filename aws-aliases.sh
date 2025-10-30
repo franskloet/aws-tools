@@ -186,8 +186,9 @@ echo "  aws-add-user-to-group <user> <group> - Add user to group"
 echo "  aws-list-groups [group]              - List all groups or group details"
 }
 
-# Show available commands only once per login session
-if [ -z "$AWS_ALIASES_LOADED" ]; then
-    export AWS_ALIASES_LOADED=1
+# Show available commands only once per day
+AWS_ALIASES_LOCK="$HOME/.aws-aliases-shown"
+if [ ! -f "$AWS_ALIASES_LOCK" ] || [ "$(find "$AWS_ALIASES_LOCK" -mtime +0 2>/dev/null)" ]; then
     aws-commands
+    touch "$AWS_ALIASES_LOCK"
 fi

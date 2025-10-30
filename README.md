@@ -152,7 +152,7 @@ aws-list-user-policies john-doe
 ### Manage IAM Groups
 
 ```bash
-# Create a group
+# Create a group without a policy
 aws-create-group developers
 
 # Create a group with a policy
@@ -205,8 +205,8 @@ aws-profiles
 # 1. Create user
 aws-create-user alice
 
-# 2. Attach S3 policy
-aws-attach-policy alice arn:aws:iam::aws:policy/AmazonS3FullAccess
+# # 2. Attach S3 policy
+# aws-attach-policy alice arn:aws:iam::aws:policy/AmazonS3FullAccess
 
 # 3. Switch to new profile
 aws-switch-profile alice
