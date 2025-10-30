@@ -155,11 +155,11 @@ aws-list-user-policies john-doe
 # Create a group without a policy
 aws-create-group developers
 
-# Create a group with a policy
-aws-create-group s3-users arn:aws:iam::aws:policy/AmazonS3FullAccess
-
 # Attach policy to existing group
 aws-attach-group-policy developers arn:aws:iam::aws:policy/AmazonS3FullAccess
+
+# Create a group with a policy
+aws-create-group s3-users arn:aws:iam::aws:policy/AmazonS3FullAccess
 
 # Add user to group
 aws-add-user-to-group john-doe developers
@@ -184,6 +184,105 @@ aws-whoami
 aws-profiles
 ```
 
+## Understanding IAM Policies
+
+### Policy Types
+
+AWS IAM uses three main types of policies to control access:
+
+#### 1. AWS Managed Policies
+- Pre-built policies created and maintained by AWS
+- Identified by ARN: `arn:aws:iam::aws:policy/<PolicyName>`
+- Cannot be modified
+- Examples: `AmazonS3FullAccess`, `IAMReadOnlyAccess`
+- **Use case**: Standard permissions that AWS maintains and updates
+
+#### 2. Customer Managed Policies
+- Custom policies you create and manage
+- Can be attached to multiple users, groups, or roles
+- Reusable across your AWS account
+- Can be versioned and modified
+- **Use case**: Custom permissions that multiple users/groups need
+
+#### 3. Inline Policies
+- Policies embedded directly into a single user, group, or role
+- Have a strict 1:1 relationship with the identity
+- Deleted when the identity is deleted
+- **Use case**: Unique permissions for a specific user/group that shouldn't be reused
+
+#### 4. Bucket Policies
+- Resource-based policies attached to S3 buckets (not IAM identities)
+- Define who can access the bucket and what actions they can perform
+- Can grant access to users from other AWS accounts or make buckets public
+- **Use case**: Control access at the bucket level, especially for cross-account access
+
+### How Policies Interact
+
+#### Policy Evaluation
+When a user tries to access a resource, AWS evaluates permissions in this order:
+
+1. **Explicit Deny**: If any policy explicitly denies the action, access is denied (overrides all allows)
+2. **Explicit Allow**: If any policy explicitly allows the action, access is granted
+3. **Default Deny**: If no policy allows the action, access is denied by default
+
+#### User, Group, and Role Permissions
+A user's effective permissions are the **union** of:
+- Policies attached directly to the user (managed or inline)
+- Policies attached to groups the user belongs to
+- Policies from assumed roles (if applicable)
+
+**Example:**
+```bash
+# User "alice" belongs to group "developers"
+# Group has: AmazonS3ReadOnlyAccess (read all buckets)
+# User has: Inline policy (write to bucket "project-x")
+# Result: Alice can read all buckets AND write to "project-x"
+```
+
+#### Bucket Policies vs IAM Policies
+For S3 access, both bucket policies and IAM policies are evaluated:
+- **IAM policies** grant permissions to identities (users/groups/roles)
+- **Bucket policies** grant permissions at the bucket level
+- Both must allow the action for access to be granted
+- Either can deny the action to block access
+
+**Example:**
+```bash
+# User has IAM policy: AmazonS3FullAccess (all S3 actions)
+# Bucket has bucket policy: Deny all access except user "bob"
+# Result: User cannot access the bucket (bucket policy denies)
+```
+
+### Best Practices
+
+1. **Use Groups for Common Permissions**: Attach managed policies to groups, then add users to groups
+2. **Use Inline Policies Sparingly**: Only for exceptions unique to one user/group
+3. **Prefer Managed Policies**: Easier to manage and audit than inline policies
+4. **Bucket Policies for Bucket-Specific Access**: Use when access should be tied to the bucket, not the user
+5. **Principle of Least Privilege**: Grant only the permissions needed for the task
+
+### Example Workflow
+
+```bash
+# Create a group for developers with S3 read access
+aws-create-group developers arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+
+# Add users to the group
+aws-add-user-to-group alice developers
+aws-add-user-to-group bob developers
+
+# Give alice write access to a specific bucket using bucket policy
+aws-attach-group-bucket-policy developers project-x-bucket read-write
+
+# Give bob additional IAM admin access (inline)
+aws-attach-policy bob arn:aws:iam::aws:policy/IAMFullAccess
+
+# Result:
+# - Both alice and bob: Read all S3 buckets (group policy)
+# - Both alice and bob: Read/write project-x-bucket (bucket policy via group)
+# - Only bob: Manage IAM (user policy)
+```
+
 ## Common Policy ARNs
 
 - S3 Full Access: `arn:aws:iam::aws:policy/AmazonS3FullAccess`
@@ -205,16 +304,13 @@ aws-profiles
 # 1. Create user
 aws-create-user alice
 
-# # 2. Attach S3 policy
-# aws-attach-policy alice arn:aws:iam::aws:policy/AmazonS3FullAccess
-
-# 3. Switch to new profile
+# 2. Switch to new profile
 aws-switch-profile alice
 
-# 4. Test access
+# 3. Test access
 aws s3 ls
 
-# 5. Create bucket policy
+# 4. Create bucket policy
 aws-bucket-policy my-data-bucket read-write alice
 ```
 
