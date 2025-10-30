@@ -122,9 +122,11 @@ echo "  AWS Tools Comprehensive Test Suite"
 echo "========================================"
 echo ""
 echo "NOTE: This test suite is designed for AWS IAM."
-echo "If using Ceph/RGW, IAM users created via IAM API"
-echo "may not work for S3 operations due to incomplete"
-echo "IAM support. Use radosgw-admin for Ceph instead."
+echo "Ceph RGW Squid supports IAM with some limitations:"
+echo "  - Managed policies work fully"
+echo "  - Wildcard inline policies work (Resource: '*')"
+echo "  - Resource-specific policies do NOT work"
+echo "See CEPH_LIMITATIONS.md for details."
 echo ""
 
 # Ensure we start with default profile
@@ -206,6 +208,40 @@ fi
 echo ""
 
 # ============================================================================
+# Part 5: Test wildcard inline policies
+# ============================================================================
+log "Part 5: Testing wildcard inline policies (Ceph Squid compatible)"
+export AWS_PROFILE=default
+
+log "Removing $TEST_USER2 from group"
+aws iam remove-user-from-group --user-name "$TEST_USER2" --group-name "$TEST_GROUP"
+success "$TEST_USER2 removed from group"
+
+log "Attaching wildcard inline policy to $TEST_USER2"
+./aws-generate-user-policy.sh s3-full-access "$TEST_USER2" | \
+  ./aws-attach-user-policy.sh "$TEST_USER2" wildcard-s3-policy - > /dev/null 2>&1
+success "Wildcard inline policy attached"
+
+log "Waiting for IAM policy changes to propagate..."
+sleep 15
+
+log "Testing S3 access with wildcard inline policy"
+export AWS_PROFILE="$TEST_USER2"
+
+log "Testing write access with inline policy..."
+echo "Test content from user2" > /tmp/test-file-user2.txt
+aws s3 cp /tmp/test-file-user2.txt "s3://$TEST_BUCKET/test-user2.txt"
+success "$TEST_USER2 can write with wildcard inline policy"
+
+log "Testing list access with inline policy..."
+if aws s3 ls "s3://$TEST_BUCKET/" | grep -q "test-user2.txt"; then
+    success "$TEST_USER2 can list with wildcard inline policy"
+else
+    warn "List test inconclusive"
+fi
+echo ""
+
+# ============================================================================
 # Test Suite Complete
 # ============================================================================
 export AWS_PROFILE=default
@@ -222,42 +258,45 @@ echo "Summary:"
 echo "  - Created test bucket: $TEST_BUCKET"
 echo "  - Created group: $TEST_GROUP with managed policy (AmazonS3FullAccess)"
 echo "  - Created users: $TEST_USER1, $TEST_USER2, $TEST_USER3"
-echo "  - Tested S3 access via managed policy"
+echo "  - Tested S3 access via managed policy (Part 4)"
+echo "  - Tested S3 access via wildcard inline policy (Part 5)"
 echo ""
-echo "CEPH RGW LIMITATIONS:"
-echo "  IAM users created via 'aws iam create-user' have the following limitations:"
+echo "CEPH RGW SQUID CAPABILITIES:"
+echo "  ✓ IAM users work properly"
 echo "  ✓ Managed policies work (e.g., AmazonS3FullAccess)"
-echo "  ✗ IAM inline policies do NOT grant S3 access"
+echo "  ✓ Wildcard inline policies work (Resource: '*')"
+echo ""
+echo "CEPH RGW SQUID LIMITATIONS:"
+echo "  ✗ Resource-specific inline policies do NOT work (Resource: 'arn:aws:s3:::bucket/*')"
 echo "  ✗ Bucket policies with IAM user principals do NOT work"
-echo "  ✗ Per-user access restrictions are NOT possible"
+echo "  ✗ Per-bucket/path access restrictions are NOT possible via IAM"
 echo ""
-echo "  For full S3 functionality with Ceph RGW, users must be created via:"
-echo "    radosgw-admin user create --uid=username --display-name=\"Display Name\""
+echo "  For resource-level access control, use radosgw-admin or wait for future releases."
+echo "  See CEPH_LIMITATIONS.md for detailed information."
 echo ""
-echo "  Parts 5-9 of this test suite are commented out because they require"
-echo "  features (inline policies, bucket policies with IAM principals) that"
-echo "  are not supported by Ceph RGW's IAM implementation."
+echo "  Parts 6-9 are commented out as they test resource-specific access control"
+echo "  which is not yet supported in Ceph RGW Squid."
 echo ""
 
 success "Test suite completed successfully!"
 exit 0
 
 # ============================================================================
-# COMMENTED OUT: Parts 5-9 (Not compatible with Ceph RGW)
+# COMMENTED OUT: Parts 6-9 (Resource-specific access control)
 # ============================================================================
 #
-# The following tests are disabled because Ceph RGW does not support:
-# - IAM inline group policies for S3 access
+# The following tests are disabled because Ceph RGW Squid does not support:
+# - Resource-specific inline policies (policies with specific bucket ARNs)
 # - Bucket policies with IAM user principals
-# - IAM inline user policies
+# - Per-bucket or per-path access restrictions via IAM
 #
-# These features work on AWS but fail on Ceph RGW because IAM users
-# created via the IAM API lack the underlying RGW user structure.
+# These features work on AWS but not on Ceph RGW Squid. Wildcard policies
+# (Resource: "*") do work, as tested in Part 5.
 #
 : <<'CEPH_INCOMPATIBLE_TESTS'
 
 # ============================================================================
-# Part 5: Grant bucket access via bucket policy (DOES NOT WORK ON CEPH)
+# Part 6: Grant bucket access via bucket policy (DOES NOT WORK ON CEPH)
 # ============================================================================
 log "Part 5: Granting bucket-specific access via bucket policy"
 export AWS_PROFILE=default

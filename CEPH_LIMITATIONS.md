@@ -1,38 +1,53 @@
-# Ceph RGW IAM Limitations
+# Ceph RGW IAM Limitations (Squid Release)
 
-This document describes the limitations of Ceph RGW's IAM implementation when using these AWS tools.
+This document describes the limitations and capabilities of Ceph RGW's IAM implementation in the Squid release when using these AWS tools.
 
 ## Summary
 
-IAM users created via `aws iam create-user` have limited functionality with Ceph RGW's S3 implementation. While the IAM operations themselves work, the created users cannot effectively access S3 resources in most scenarios.
+Ceph Squid introduced proper IAM account support, making most IAM operations functional. However, there are still some limitations around resource-specific access control.
+
+## Prerequisites
+
+- Ceph Squid or later
+- IAM accounts feature enabled
+- Using an IAM Root Account (your default profile should have ARN ending in `:root`)
 
 ## What Works ✓
 
-- **Creating IAM users** via `aws iam create-user`
-- **Creating IAM groups** via `aws iam create-group`
-- **Adding users to groups** via `aws iam add-user-to-group`
-- **Attaching AWS managed policies** like `AmazonS3FullAccess` to groups
-- **S3 access with managed policies** - Users in groups with `AmazonS3FullAccess` CAN access S3
+- **Creating IAM users** via `aws iam create-user` - Fully functional
+- **Creating IAM groups** via `aws iam create-group` - Fully functional
+- **Adding users to groups** via `aws iam add-user-to-group` - Fully functional
+- **Attaching AWS managed policies** like `AmazonS3FullAccess` to groups - Fully functional
+- **S3 access with managed policies** - Works perfectly
+- **IAM inline user policies with wildcard resources** - Works (e.g., `"Resource": "*"`)
+- **IAM inline group policies with wildcard resources** - Works (e.g., `"Resource": "*"`)
 
 ## What Doesn't Work ✗
 
-- **IAM inline group policies** - Do NOT grant S3 access to group members
-- **IAM inline user policies** - Do NOT grant S3 access to users
-- **Bucket policies with IAM user principals** - Do NOT grant access to IAM users
-- **Per-user or per-folder access restrictions** - Cannot be implemented
+- **IAM inline policies with specific bucket ARNs** - Policies like `"Resource": "arn:aws:s3:::bucket-name/*"` fail
+- **Bucket policies with IAM user principals** - Bucket policies specifying IAM users don't grant access
+- **Resource-specific access restrictions** - Cannot restrict access to specific buckets/paths via inline policies
+- **Per-user folder access** - Cannot implement user-specific path restrictions
 
 ## Root Cause
 
-When you create an IAM user via `aws iam create-user`, Ceph RGW creates an IAM identity but does NOT create the underlying RGW user structure that's required for S3 operations. This means:
+The limitations stem from incomplete implementation of resource-level access control in Ceph RGW's IAM:
 
-1. The IAM user exists and can authenticate
-2. IAM policies appear to be attached correctly
-3. But S3 operations fail with `AccessDenied` (with empty error messages)
-4. AWS CLI shows: `argument of type 'NoneType' is not iterable`
+1. IAM users are properly created and can authenticate
+2. Policies with wildcard resources (`"Resource": "*"`) work correctly
+3. Policies with specific ARNs (`"Resource": "arn:aws:s3:::bucket/*"`) fail with `AccessDenied`
+4. The error message is empty, causing AWS CLI to show: `argument of type 'NoneType' is not iterable`
 
-## Solution: Use radosgw-admin
+## Solutions and Workarounds
 
-For full S3 functionality with Ceph RGW, users must be created using `radosgw-admin`:
+### For Full Access Control
+
+If you need resource-specific access control, the options are limited:
+
+1. **Use managed policies only** - Stick to AWS managed policies like `AmazonS3FullAccess` or `AmazonS3ReadOnlyAccess`
+2. **Use wildcard inline policies** - Create inline policies with `"Resource": "*"` (all-or-nothing access)
+3. **Wait for Ceph updates** - Resource-level IAM support may be improved in future releases
+4. **Use radosgw-admin** - For complete control, create users via radosgw-admin:
 
 ```bash
 # Create RGW user (not IAM user)
@@ -48,31 +63,48 @@ radosgw-admin caps add \
   --caps="users=read,write;buckets=read,write"
 ```
 
-Then configure the AWS CLI profile with these credentials.
-
 ## Test Suite Implications
 
-The `test-suite.sh` script tests IAM functionality. On Ceph RGW:
+The `test-suite.sh` script tests IAM functionality. On Ceph RGW Squid:
 
-- **Parts 1-4 work**: Create resources and test with managed policies
-- **Parts 5-9 are commented out**: These test inline policies and bucket policies which don't work on Ceph
+- **Parts 1-4 work**: Create resources, test with managed policies and wildcard inline policies
+- **Part 5 works**: Test inline policies with wildcard resources
+- **Parts 6-9 commented out**: These test resource-specific access control which doesn't work
 
-## Workaround
+## Practical Usage
 
-If you must use IAM users with Ceph:
+### What You Can Do with IAM on Ceph Squid:
 
-1. Create users via IAM API (`aws iam create-user`)
-2. Put them in a group with **AmazonS3FullAccess** managed policy
-3. **Do not try to restrict access** via inline policies or bucket policies
-4. All users will have full S3 access
+```bash
+# Create user and group
+./aws-create-user.sh alice
+./aws-create-group.sh developers arn:aws:iam::aws:policy/AmazonS3FullAccess
+./aws-add-user-to-group.sh alice developers
 
-This is suitable for development/testing but not for production access control.
+# OR use wildcard inline policy
+./aws-generate-user-policy.sh s3-full-access alice | \
+  ./aws-attach-user-policy.sh alice s3-access -
+
+# Alice can now access all S3 buckets
+```
+
+### What You Cannot Do:
+
+```bash
+# This will NOT work - bucket-specific inline policies fail
+./aws-generate-user-policy.sh s3-bucket-full bob my-bucket | \
+  ./aws-attach-user-policy.sh bob bucket-access -
+
+# This will NOT work - bucket policies with IAM principals fail  
+./ceph-grant-group-bucket-access.sh developers my-bucket full
+```
 
 ## Recommendations
 
-- **For Ceph RGW in production**: Use `radosgw-admin` to create users
+- **For simple multitenancy**: Use IAM with managed policies or wildcard inline policies
+- **For resource-level access control**: Use `radosgw-admin` users or wait for future Ceph releases
 - **For AWS compatibility testing**: Use actual AWS, not Ceph RGW
-- **For simple Ceph access**: Use `AmazonS3FullAccess` and accept no access control
+- **For production with granular control**: Consider using separate RGW instances or radosgw-admin users
 
 ## More Information
 
