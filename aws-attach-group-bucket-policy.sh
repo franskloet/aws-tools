@@ -3,29 +3,29 @@
 
 # Check arguments
 if [ -z "$1" ] || [ -z "$2" ]; then
-    echo "Usage: $0 <group-name> <bucket-name> [access-level] [profile]"
+    echo "Usage: $0 <group-name> <bucket-name> [access-level]"
     echo ""
     echo "Arguments:"
     echo "  group-name    - IAM group name"
     echo "  bucket-name   - S3 bucket name"
     echo "  access-level  - Optional: full, read, write (default: full)"
-    echo "  profile       - Optional: AWS profile to use (default: default)"
+    echo ""
+    echo "Note: This script always uses the 'default' AWS profile for IAM operations."
     echo ""
     echo "Examples:"
     echo "  $0 data-scientists my-bucket"
     echo "  $0 analysts my-bucket read"
-    echo "  $0 developers my-bucket full myprofile"
+    echo "  $0 developers my-bucket write"
     exit 1
 fi
 
 GROUP_NAME="$1"
 BUCKET_NAME="$2"
 ACCESS_LEVEL="${3:-full}"
-PROFILE="${4:-default}"
 
-# Save original profile
+# Save original profile and force use of default for IAM operations
 ORIG_PROFILE="${AWS_PROFILE:-}"
-export AWS_PROFILE="$PROFILE"
+export AWS_PROFILE=default
 
 # Define policy based on access level
 case "$ACCESS_LEVEL" in

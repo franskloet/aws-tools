@@ -1,9 +1,13 @@
 #!/bin/bash
 # AWS Management Aliases and Functions
-# Add to your ~/.bashrc: source ~/s3/AWS/aws-aliases.sh
+# Add to your ~/.bashrc: export AWS_SCRIPTS_DIR="/path/to/aws-tools" && source "$AWS_SCRIPTS_DIR/aws-aliases.sh"
 
-# Directory where AWS scripts are located
-AWS_SCRIPTS_DIR="$HOME/s3/AWS"
+# Directory where AWS scripts are located (must be set before sourcing this file)
+if [ -z "$AWS_SCRIPTS_DIR" ]; then
+    echo "Error: AWS_SCRIPTS_DIR is not set. Please set it before sourcing this file."
+    echo "Example: export AWS_SCRIPTS_DIR=\"$HOME/Development/storage/aws-tools\""
+    return 1 2>/dev/null || exit 1
+fi
 
 # Alias to create new AWS user
 alias aws-create-user="$AWS_SCRIPTS_DIR/aws-create-user.sh"

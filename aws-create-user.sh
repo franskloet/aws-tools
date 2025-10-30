@@ -29,11 +29,17 @@ export AWS_PROFILE=default
 echo "Checking if user exists: $USERNAME"
 if aws iam get-user --user-name "$USERNAME" &>/dev/null; then
     echo "User '$USERNAME' already exists"
-    read -p "Create new access key for existing user? (y/N) " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        echo "Aborted. User exists but no new access key created."
-        exit 1
+    
+    # In non-interactive mode (AUTO_CONFIRM=1), automatically create new key
+    if [ "${AUTO_CONFIRM:-0}" = "1" ]; then
+        echo "Auto-confirming: Creating new access key for existing user"
+    else
+        read -p "Create new access key for existing user? (y/N) " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            echo "Aborted. User exists but no new access key created."
+            exit 1
+        fi
     fi
 else
     echo "Creating IAM user: $USERNAME"
@@ -72,16 +78,19 @@ if ! grep -q "^\[profile $PROFILE_NAME\]" "$AWS_CONFIG_FILE" 2>/dev/null; then
     # Get endpoint_url from default profile if it exists
     ENDPOINT_URL=$(grep -A 10 '^\[default\]' "$AWS_CONFIG_FILE" 2>/dev/null | grep '^endpoint_url' | head -1 | sed 's/endpoint_url *= *//')
     
-    cat >> "$AWS_CONFIG_FILE" << EOF
-
-[profile $PROFILE_NAME]
-region = us-east-1
-output = json
-EOF
+    {
+        echo ""
+        echo "[profile $PROFILE_NAME]"
+        echo "region = us-east-1"
+        echo "output = json"
+        
+        # Add endpoint_url if it was found in default profile
+        if [ -n "$ENDPOINT_URL" ]; then
+            echo "endpoint_url = $ENDPOINT_URL"
+        fi
+    } >> "$AWS_CONFIG_FILE"
     
-    # Add endpoint_url if it was found in default profile
     if [ -n "$ENDPOINT_URL" ]; then
-        echo "endpoint_url = $ENDPOINT_URL" >> "$AWS_CONFIG_FILE"
         echo "Copied endpoint_url from default profile: $ENDPOINT_URL"
     fi
     

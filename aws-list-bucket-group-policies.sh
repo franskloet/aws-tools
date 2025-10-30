@@ -1,75 +1,81 @@
 #!/bin/bash
 # Script to list which groups have inline policies for a specific bucket
 
+set -o pipefail
+
 # Check arguments
 if [ -z "$1" ]; then
-    echo "Usage: $0 <bucket-name> [profile]"
+    echo "Usage: $0 <bucket-name>"
     echo ""
     echo "Arguments:"
     echo "  bucket-name - S3 bucket name"
-    echo "  profile     - Optional: AWS profile to use (default: default)"
     echo ""
     echo "This lists all groups with inline policies granting access to the specified bucket"
     echo ""
+    echo "Note: This script always uses the 'default' AWS profile for IAM operations."
+    echo ""
     echo "Examples:"
     echo "  $0 my-bucket"
-    echo "  $0 data-bucket myprofile"
+    echo "  $0 project-x-bucket"
     exit 1
 fi
 
 BUCKET_NAME="$1"
-PROFILE="${2:-default}"
 
-# Save original profile
+# Save original profile and force use of default for IAM operations
 ORIG_PROFILE="${AWS_PROFILE:-}"
-export AWS_PROFILE="$PROFILE"
+export AWS_PROFILE=default
 
 echo "Groups with policies for bucket: $BUCKET_NAME"
 echo ""
 
-# Get all groups
-GROUPS=$(aws iam list-groups --output json 2>/dev/null | jq -r '.Groups[].GroupName')
+# Use temp files to avoid bash/jq quirks with command substitution
+TEMP_GROUPS="$(mktemp)"
+trap "rm -f '$TEMP_GROUPS'" EXIT
 
-if [ -z "$GROUPS" ]; then
+# Get all groups
+aws iam list-groups --output json | jq -r '.Groups[] | .GroupName' > "$TEMP_GROUPS"
+if [ ! -s "$TEMP_GROUPS" ]; then
     echo "  No groups found"
-else
-    FOUND=0
-    while IFS= read -r group; do
-        # List inline policies for this group
-        POLICIES=$(aws iam list-group-policies --group-name "$group" --output json 2>/dev/null | jq -r '.PolicyNames[]')
-        
-        if [ -n "$POLICIES" ]; then
-            while IFS= read -r policy; do
-                # Check if policy name contains the bucket name
-                if [[ "$policy" == *"$BUCKET_NAME"* ]]; then
-                    FOUND=1
-                    echo "Group: $group"
-                    echo "  Policy: $policy"
-                    
-                    # Get policy details
-                    POLICY_DOC=$(aws iam get-group-policy --group-name "$group" --policy-name "$policy" --output json 2>/dev/null | jq -r '.PolicyDocument')
-                    
-                    # Extract access level from policy name or actions
-                    if [[ "$policy" == *"-full" ]]; then
-                        ACCESS_LEVEL="full"
-                    elif [[ "$policy" == *"-read" ]]; then
-                        ACCESS_LEVEL="read-only"
-                    elif [[ "$policy" == *"-write" ]]; then
-                        ACCESS_LEVEL="write-only"
-                    else
-                        ACCESS_LEVEL="custom"
-                    fi
-                    
-                    echo "  Access: $ACCESS_LEVEL"
-                    echo ""
-                fi
-            done <<< "$POLICIES"
-        fi
-    done <<< "$GROUPS"
+    exit 0
+fi
+
+FOUND=0
+while IFS= read -r group; do
+    [ -z "$group" ] && continue
     
-    if [ $FOUND -eq 0 ]; then
-        echo "  No groups found with policies for bucket: $BUCKET_NAME"
+    # List inline policies for this group
+    POLICIES=$(aws iam list-group-policies --group-name "$group" --output json | jq -r '.PolicyNames[] | .' 2>/dev/null)
+    if [ $? -eq 0 ] && [ -n "$POLICIES" ]; then
+        while IFS= read -r policy; do
+            [ -z "$policy" ] && continue
+            
+            # Check if policy name contains the bucket name
+            if [[ "$policy" == *"$BUCKET_NAME"* ]]; then
+                FOUND=1
+                echo "Group: $group"
+                echo "  Policy: $policy"
+                
+                # Extract access level from policy name
+                if [[ "$policy" == *"-full" ]]; then
+                    ACCESS_LEVEL="full"
+                elif [[ "$policy" == *"-read" ]]; then
+                    ACCESS_LEVEL="read-only"
+                elif [[ "$policy" == *"-write" ]]; then
+                    ACCESS_LEVEL="write-only"
+                else
+                    ACCESS_LEVEL="custom"
+                fi
+                
+                echo "  Access: $ACCESS_LEVEL"
+                echo ""
+            fi
+        done <<< "$POLICIES"
     fi
+done < "$TEMP_GROUPS"
+
+if [ $FOUND -eq 0 ]; then
+    echo "  No groups found with policies for bucket: $BUCKET_NAME"
 fi
 
 # Restore original profile
