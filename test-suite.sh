@@ -4,6 +4,22 @@
 
 set -e
 
+# Parse command-line arguments
+ENABLE_RESOURCE_TESTS=0
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --enable-resource-tests)
+      ENABLE_RESOURCE_TESTS=1
+      shift
+      ;;
+    *)
+      echo "Unknown option: $1"
+      echo "Usage: $0 [--enable-resource-tests]"
+      exit 1
+      ;;
+  esac
+done
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -121,12 +137,20 @@ echo "========================================"
 echo "  AWS Tools Comprehensive Test Suite"
 echo "========================================"
 echo ""
-echo "NOTE: This test suite is designed for AWS IAM."
-echo "Ceph RGW Squid supports IAM with some limitations:"
-echo "  - Managed policies work fully"
-echo "  - Wildcard inline policies work (Resource: '*')"
-echo "  - Resource-specific policies do NOT work"
-echo "See CEPH_LIMITATIONS.md for details."
+if [ "$ENABLE_RESOURCE_TESTS" -eq 1 ]; then
+    echo "ENABLED: Resource-specific tests (Parts 6-9)"
+    echo "WARNING: These tests are NOT compatible with Ceph RGW Squid."
+    echo "         They are designed for AWS IAM only."
+else
+    echo "NOTE: This test suite is designed for AWS IAM."
+    echo "Ceph RGW Squid supports IAM with some limitations:"
+    echo "  - Managed policies work fully"
+    echo "  - Wildcard inline policies work (Resource: '*')"
+    echo "  - Resource-specific policies do NOT work"
+    echo "See CEPH_LIMITATIONS.md for details."
+    echo ""
+    echo "To enable resource-specific tests (Parts 6-9), use: --enable-resource-tests"
+fi
 echo ""
 
 # Ensure we start with default profile
@@ -279,21 +303,18 @@ echo "  which is not yet supported in Ceph RGW Squid."
 echo ""
 
 success "Test suite completed successfully!"
-exit 0
+
+if [ "$ENABLE_RESOURCE_TESTS" -eq 0 ]; then
+    exit 0
+fi
 
 # ============================================================================
-# COMMENTED OUT: Parts 6-9 (Resource-specific access control)
+# Parts 6-9: Resource-specific access control (AWS only)
 # ============================================================================
-#
-# The following tests are disabled because Ceph RGW Squid does not support:
-# - Resource-specific inline policies (policies with specific bucket ARNs)
-# - Bucket policies with IAM user principals
-# - Per-bucket or per-path access restrictions via IAM
-#
-# These features work on AWS but not on Ceph RGW Squid. Wildcard policies
-# (Resource: "*") do work, as tested in Part 5.
-#
-: <<'CEPH_INCOMPATIBLE_TESTS'
+echo ""
+log "Continuing with resource-specific tests (Parts 6-9)..."
+log "WARNING: These tests are designed for AWS IAM and will fail on Ceph RGW Squid"
+echo ""
 
 # ============================================================================
 # Part 6: Grant bucket access via bucket policy (DOES NOT WORK ON CEPH)
@@ -377,7 +398,4 @@ echo "which works with both AWS and Ceph RGW. IAM inline policies"
 echo "are not used as they are not fully supported by Ceph RGW."
 echo ""
 
-success "Test suite completed successfully!"
-
-
-CEPH_INCOMPATIBLE_TESTS
+success "Extended test suite completed successfully!"
