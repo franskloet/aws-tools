@@ -343,3 +343,5 @@ Install jq: `sudo dnf install jq`
 - Use `chmod 600 ~/.aws/credentials` to restrict access
 - Consider using AWS IAM roles instead of access keys when possible
 - Rotate access keys regularly
+
+-github-test
