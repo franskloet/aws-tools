@@ -122,6 +122,9 @@ aws-list-user-policies john-doe
 # Create a group
 aws-create-group developers
 
+# Delete a group (removes users, policies, then deletes)
+aws-delete-group developers
+
 # Create default S3 access policy for group (with tenant)
 aws-create-group-policy developers            # Uses default tenant: sils_mns
 aws-create-group-policy developers project_x  # Custom tenant

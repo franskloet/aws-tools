@@ -344,6 +344,44 @@ success "Group policies cleared"
 echo ""
 
 # ============================================================================
+# Part 10: Test group deletion
+# ============================================================================
+log "Part 10: Testing group deletion"
+
+# Create a temporary test group to delete
+TEST_DELETE_GROUP="test-delete-group-$(date +%s)"
+log "Creating temporary group for deletion test: $TEST_DELETE_GROUP"
+./aws-create-group.sh "$TEST_DELETE_GROUP"
+success "Temporary group created"
+
+log "Adding $TEST_USER3 to temporary group"
+./aws-add-user-to-group.sh "$TEST_USER3" "$TEST_DELETE_GROUP"
+success "User added to temporary group"
+
+log "Adding inline policy to temporary group"
+./aws-create-group-policy.sh "$TEST_DELETE_GROUP" "$TENANT"
+success "Policy added to temporary group"
+
+log "Deleting temporary group with aws-delete-group (auto-confirm)"
+export AUTO_CONFIRM=1
+if echo "yes" | ./aws-delete-group.sh "$TEST_DELETE_GROUP" 2>&1; then
+    success "Group deleted successfully"
+else
+    error "Group deletion failed"
+    exit 1
+fi
+unset AUTO_CONFIRM
+
+log "Verifying group was deleted"
+if aws iam get-group --group-name "$TEST_DELETE_GROUP" &>/dev/null; then
+    error "Group still exists after deletion"
+    exit 1
+else
+    success "Group deletion verified"
+fi
+echo ""
+
+# ============================================================================
 # Test Suite Complete
 # ============================================================================
 export AWS_PROFILE=default
@@ -363,12 +401,14 @@ echo "  - Created users: $TEST_USER1, $TEST_USER2, $TEST_USER3"
 echo "  - Applied group inline policy (default S3 list access)"
 echo "  - Applied user inline policies (bucket/prefix access)"
 echo "  - Tested policy listing and cleanup functions"
+echo "  - Tested group deletion with aws-delete-group"
 echo ""
 echo "CEPH S3 CAPABILITIES TESTED:"
 echo "  ✓ IAM user and group creation"
 echo "  ✓ Inline group policies with tenant support"
 echo "  ✓ Inline user policies with tenant-aware bucket/prefix ARNs"
 echo "  ✓ Policy listing and cleanup functions"
+echo "  ✓ Group deletion with automatic cleanup"
 echo ""
 echo "IMPORTANT NOTES:"
 echo "  - Tenant-aware ARNs: arn:aws:s3::<tenant>:<bucket>/<prefix>/*"
