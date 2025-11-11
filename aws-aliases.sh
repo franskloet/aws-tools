@@ -20,14 +20,11 @@ aws-switch-profile() {
     source "$AWS_SCRIPTS_DIR/aws-switch-profile.sh" "$@"
 }
 
-# Alias to create bucket policies
-alias aws-bucket-policy="$AWS_SCRIPTS_DIR/aws-create-bucket-policy.sh"
+# Alias to create group policy (default S3 access)
+alias aws-create-group-policy="$AWS_SCRIPTS_DIR/aws-create-group-policy.sh"
 
-# Alias to get bucket policy
-alias aws-get-bucket-policy="$AWS_SCRIPTS_DIR/aws-get-bucket-policy.sh"
-
-# Alias to delete bucket policy
-alias aws-delete-bucket-policy="$AWS_SCRIPTS_DIR/aws-delete-bucket-policy.sh"
+# Alias to create user policy (bucket/prefix access)
+alias aws-create-user-policy="$AWS_SCRIPTS_DIR/aws-create-user-policy.sh"
 
 # Aliases for group management
 alias aws-create-group="$AWS_SCRIPTS_DIR/aws-create-group.sh"
@@ -35,9 +32,7 @@ alias aws-add-user-to-group="$AWS_SCRIPTS_DIR/aws-add-user-to-group.sh"
 alias aws-list-groups="$AWS_SCRIPTS_DIR/aws-list-groups.sh"
 alias aws-detach-user-policy="$AWS_SCRIPTS_DIR/aws-detach-user-policy.sh"
 alias aws-detach-group-policy="$AWS_SCRIPTS_DIR/aws-detach-group-policy.sh"
-alias aws-detach-group-bucket-policy="$AWS_SCRIPTS_DIR/aws-detach-group-bucket-policy.sh"
 alias aws-list-group-policies="$AWS_SCRIPTS_DIR/aws-list-group-policies.sh"
-alias aws-list-bucket-group-policies="$AWS_SCRIPTS_DIR/aws-list-bucket-group-policies.sh"
 alias aws-clear-user-policies="$AWS_SCRIPTS_DIR/aws-clear-user-policies.sh"
 alias aws-clear-group-policies="$AWS_SCRIPTS_DIR/aws-clear-group-policies.sh"
 alias aws-restrict-group-to-bucket="$AWS_SCRIPTS_DIR/aws-restrict-group-to-bucket.sh"
@@ -166,9 +161,6 @@ echo "Available commands:"
 echo "  aws-create-user <username> [profile]  - Create IAM user and configure profile"
 echo "  aws-delete-user <username> [profile]  - Delete IAM user and remove profile"
 echo "  aws-switch-profile <profile>          - Switch to different AWS profile"
-echo "  aws-bucket-policy <bucket> <type>     - Create and apply S3 bucket policy"
-echo "  aws-get-bucket-policy <bucket>        - Get current bucket policy"
-echo "  aws-delete-bucket-policy <bucket>     - Delete bucket policy"
 echo "  aws-current                           - Show current AWS profile"
 echo "  aws-profiles                          - List all configured profiles"
 echo "  aws_whoami                            - Show current AWS identity"
@@ -180,10 +172,9 @@ echo "  aws-create-group <group> [arn]       - Create IAM group with optional po
 echo "  aws-attach-group-policy <group> <arn|name> - Attach policy to group"
 echo "  aws-detach-group-policy <group> <arn> - Detach policy from group"
 echo "  aws-clear-group-policies <group>     - Remove all policies from group"
-echo "  aws-detach-group-bucket-policy <group> <bucket> [level] - Detach bucket policy from group"
-echo "  aws-restrict-group-to-bucket <group> <bucket> [level] - Replace broad S3 access with bucket-specific"
+echo "  aws-create-group-policy <group> [tenant] - Create default S3 policy for group"
+echo "  aws-create-user-policy <user> <bucket> [prefixes] [tenant] - Create bucket/prefix policy for user"
 echo "  aws-list-group-policies <group>      - List all policies for a group"
-echo "  aws-list-bucket-group-policies <bucket> - List groups with access to a bucket"
 echo "  aws-add-user-to-group <user> <group> - Add user to group"
 echo "  aws-list-groups [group]              - List all groups or group details"
 }

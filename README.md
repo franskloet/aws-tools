@@ -1,6 +1,6 @@
-# AWS Management Scripts
+# AWS/CEPH S3 Management Scripts
 
-A collection of wrapper scripts to simplify AWS IAM user management, profile switching, and S3 bucket policy creation.
+A collection of wrapper scripts to simplify IAM user management, profile switching, and policy creation for CEPH S3 storage systems.
 
 ## Installation
 
@@ -106,39 +106,6 @@ aws-switch-profile
 export AWS_PROFILE=john-doe
 ```
 
-### Create S3 Bucket Policies
-
-Generate and optionally apply bucket policies:
-
-```bash
-# Read-only access for specific user
-aws-bucket-policy my-bucket read-only john-doe
-
-# Read-write access
-aws-bucket-policy my-bucket read-write john-doe
-
-# Full access (including delete)
-aws-bucket-policy my-bucket full-access john-doe
-
-# Public read access
-aws-bucket-policy my-bucket public-read
-
-# Ceph/RGW compatible policies
-aws-bucket-policy my-bucket ceph-read-write
-aws-bucket-policy my-bucket ceph-read-only
-
-# Generate custom template
-aws-bucket-policy my-bucket custom
-```
-
-### Get Bucket Policy
-
-View the current bucket policy:
-
-```bash
-aws-get-bucket-policy my-bucket
-```
-
 ### Manage User Policies
 
 ```bash
@@ -152,14 +119,12 @@ aws-list-user-policies john-doe
 ### Manage IAM Groups
 
 ```bash
-# Create a group without a policy
+# Create a group
 aws-create-group developers
 
-# Attach policy to existing group
-aws-attach-group-policy developers arn:aws:iam::aws:policy/AmazonS3FullAccess
-
-# Create a group with a policy
-aws-create-group s3-users arn:aws:iam::aws:policy/AmazonS3FullAccess
+# Create default S3 access policy for group (with tenant)
+aws-create-group-policy developers            # Uses default tenant: sils_mns
+aws-create-group-policy developers project_x  # Custom tenant
 
 # Add user to group
 aws-add-user-to-group john-doe developers
@@ -169,6 +134,23 @@ aws-list-groups
 
 # List group details and members
 aws-list-groups developers
+```
+
+### Manage User Policies (CEPH S3)
+
+```bash
+# Grant user full access to a bucket
+aws-create-user-policy alice users
+
+# Grant user access to specific prefixes in a bucket
+aws-create-user-policy john data project1/ shared/
+
+# With custom tenant
+aws-create-user-policy bob research experiment1/ tenant=project_alpha
+
+# Examples:
+# - Full bucket access: aws-create-user-policy alice mydata
+# - Prefix access: aws-create-user-policy bob files home/bob/ shared/
 ```
 
 ### Utility Commands
@@ -183,6 +165,28 @@ aws-whoami
 # List all profiles
 aws-profiles
 ```
+
+## CEPH S3 Considerations
+
+### Tenant Support
+
+CEPH S3 uses tenants in the resource ARN format:
+```
+arn:aws:s3::<tenant>:<bucket>
+arn:aws:s3::<tenant>:<bucket>/<prefix>/*
+```
+
+The default tenant for these scripts is `sils_mns`, but can be overridden:
+- Group policies: `aws-create-group-policy <group> <tenant>`
+- User policies: `aws-create-user-policy <user> <bucket> [prefixes...] tenant=<tenant>`
+
+### CEPH Limitations
+
+Key points about CEPH RGW IAM:
+- Inline policies with wildcard resources work (`"Resource": "*"`)
+- Inline policies with specific bucket ARNs may have issues on older CEPH versions
+- Bucket policies with IAM principals may not work as expected
+- For resource-level access control, use inline user/group policies with tenant-aware ARNs
 
 ## Understanding IAM Policies
 
@@ -261,26 +265,29 @@ For S3 access, both bucket policies and IAM policies are evaluated:
 4. **Bucket Policies for Bucket-Specific Access**: Use when access should be tied to the bucket, not the user
 5. **Principle of Least Privilege**: Grant only the permissions needed for the task
 
-### Example Workflow
+### Example Workflow (CEPH S3)
 
 ```bash
-# Create a group for developers with S3 read access
-aws-create-group developers arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+# Create a group for developers
+aws-create-group developers
+
+# Apply default S3 list policy to group
+aws-create-group-policy developers
 
 # Add users to the group
 aws-add-user-to-group alice developers
 aws-add-user-to-group bob developers
 
-# Give alice write access to a specific bucket using bucket policy
-aws-attach-group-bucket-policy developers project-x-bucket write
+# Give alice full access to specific bucket
+aws-create-user-policy alice project-data
 
-# Give bob additional IAM admin access (inline)
-aws-attach-policy bob arn:aws:iam::aws:policy/IAMFullAccess
+# Give bob access to specific prefixes
+aws-create-user-policy bob shared-data team1/ common/
 
 # Result:
-# - Both alice and bob: Read all S3 buckets (group policy)
-# - Both alice and bob: Read/write project-x-bucket (bucket policy via group)
-# - Only bob: Manage IAM (user policy)
+# - Both alice and bob: Can list all buckets (group policy)
+# - Alice: Full access to project-data bucket
+# - Bob: Access to team1/ and common/ prefixes in shared-data bucket
 ```
 
 ## Common Policy ARNs
@@ -298,20 +305,24 @@ aws-attach-policy bob arn:aws:iam::aws:policy/IAMFullAccess
 
 ## Examples
 
-### Complete Workflow: Create User with S3 Access
+### Complete Workflow: Create User with CEPH S3 Access
 
 ```bash
 # 1. Create user
 aws-create-user alice
 
-# 2. Switch to new profile
+# 2. Create group and add user
+aws-create-group data-users
+aws-create-group-policy data-users
+aws-add-user-to-group alice data-users
+
+# 3. Grant user access to specific bucket/prefixes
+aws-create-user-policy alice project-data analysis/ results/
+
+# 4. Switch to new profile and test
 aws-switch-profile alice
-
-# 3. Test access
 aws s3 ls
-
-# 4. Create bucket policy
-aws-bucket-policy my-data-bucket read-write alice
+aws s3 ls s3://project-data/analysis/
 ```
 
 ### Switch Between Multiple Projects
