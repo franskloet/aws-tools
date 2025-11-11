@@ -8,7 +8,7 @@ if [ -z "$1" ]; then
     echo ""
     echo "Arguments:"
     echo "  group-name - IAM group name"
-    echo "  tenant     - Optional: CEPH tenant (default: sils_mns)"
+    echo "  tenant     - Optional: CEPH tenant (default: \$AWS_DEFAULT_TENANT or sils_mns)"
     echo ""
     echo "This creates an inline policy that grants the group:"
     echo "  - ListAllMyBuckets permission for the tenant"
@@ -22,7 +22,7 @@ if [ -z "$1" ]; then
 fi
 
 GROUP_NAME="$1"
-TENANT="${2:-sils_mns}"
+TENANT="${2:-${AWS_DEFAULT_TENANT:-sils_mns}}"
 
 # Save original profile and force use of default for IAM operations
 ORIG_PROFILE="${AWS_PROFILE:-}"

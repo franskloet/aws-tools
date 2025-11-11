@@ -10,7 +10,7 @@ if [ -z "$1" ] || [ -z "$2" ]; then
     echo "  username    - IAM username"
     echo "  bucket-name - S3 bucket name"
     echo "  prefix1,2.. - Optional: specific prefixes within the bucket"
-    echo "  tenant=...  - Optional: CEPH tenant (default: sils_mns)"
+    echo "  tenant=...  - Optional: CEPH tenant (default: \$AWS_DEFAULT_TENANT or sils_mns)"
     echo ""
     echo "This creates an inline policy that grants the user:"
     echo "  - ListBucket permission for the specified bucket"
@@ -35,7 +35,7 @@ BUCKET_NAME="$2"
 shift 2
 
 # Default tenant
-TENANT="sils_mns"
+TENANT="${AWS_DEFAULT_TENANT:-sils_mns}"
 PREFIXES=()
 
 # Parse remaining arguments

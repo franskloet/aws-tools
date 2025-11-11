@@ -57,6 +57,21 @@ source ~/.bashrc
 - AWS CLI installed and configured
 - `jq` for JSON parsing: `sudo dnf install jq` (AlmaLinux)
 
+## Configuration
+
+### Environment Variables
+
+- `AWS_PROFILE`: Standard AWS CLI variable to set the active profile
+- `AWS_DEFAULT_TENANT`: Default CEPH tenant for policy ARNs (default: `sils_mns`)
+- `AWS_SCRIPTS_DIR`: Directory where scripts are installed (set automatically by install script)
+
+Example `~/.bashrc` configuration:
+```bash
+# AWS tools
+export AWS_DEFAULT_TENANT=my_tenant
+source ~/s3/AWS/aws-aliases.sh
+```
+
 ## Usage
 
 ### Create New IAM User
@@ -126,8 +141,13 @@ aws-create-group developers
 aws-delete-group developers
 
 # Create default S3 access policy for group (with tenant)
-aws-create-group-policy developers            # Uses default tenant: sils_mns
+aws-create-group-policy developers            # Uses default tenant: $AWS_DEFAULT_TENANT or sils_mns
 aws-create-group-policy developers project_x  # Custom tenant
+
+# Add bucket/prefix policy to group
+aws-add-group-bucket-policy developers project-data                    # Full access to bucket
+aws-add-group-bucket-policy researchers shared-data experiments/      # Access to prefix
+aws-add-group-bucket-policy analysts data-bucket reports/ project_x read  # Read-only with custom tenant
 
 # Add user to group
 aws-add-user-to-group john-doe developers
@@ -179,9 +199,34 @@ arn:aws:s3::<tenant>:<bucket>
 arn:aws:s3::<tenant>:<bucket>/<prefix>/*
 ```
 
-The default tenant for these scripts is `sils_mns`, but can be overridden:
+#### Default Tenant Configuration
+
+You can set a default tenant using the `AWS_DEFAULT_TENANT` environment variable:
+```bash
+# Add to your ~/.bashrc
+export AWS_DEFAULT_TENANT=my_tenant
+```
+
+If not set, the scripts will default to `sils_mns`.
+
+#### Overriding the Default Tenant
+
+You can override the default tenant per-command:
 - Group policies: `aws-create-group-policy <group> <tenant>`
+- Group bucket policies: `aws-add-group-bucket-policy <group> <bucket> [prefix] <tenant> [access-level]`
 - User policies: `aws-create-user-policy <user> <bucket> [prefixes...] tenant=<tenant>`
+
+Examples:
+```bash
+# Use default tenant
+aws-create-group-policy developers
+aws-add-group-bucket-policy researchers data
+
+# Override with custom tenant
+aws-create-group-policy developers project_alpha
+aws-add-group-bucket-policy researchers data experiments/ project_alpha
+aws-create-user-policy bob research exp1/ tenant=project_alpha
+```
 
 ### CEPH Limitations
 
@@ -271,11 +316,17 @@ For S3 access, both bucket policies and IAM policies are evaluated:
 ### Example Workflow (CEPH S3)
 
 ```bash
+# Set default tenant (optional)
+export AWS_DEFAULT_TENANT=my_tenant
+
 # Create a group for developers
 aws-create-group developers
 
 # Apply default S3 list policy to group
 aws-create-group-policy developers
+
+# Give the group access to a shared bucket
+aws-add-group-bucket-policy developers shared-data read
 
 # Add users to the group
 aws-add-user-to-group alice developers
@@ -289,8 +340,9 @@ aws-create-user-policy bob shared-data team1/ common/
 
 # Result:
 # - Both alice and bob: Can list all buckets (group policy)
-# - Alice: Full access to project-data bucket
-# - Bob: Access to team1/ and common/ prefixes in shared-data bucket
+# - Both alice and bob: Read access to shared-data bucket (group policy)
+# - Alice: Full access to project-data bucket (user policy)
+# - Bob: Full access to team1/ and common/ prefixes in shared-data bucket (user policy)
 ```
 
 ## Common Policy ARNs
