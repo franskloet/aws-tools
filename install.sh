@@ -30,7 +30,6 @@ echo ""
 # List of scripts to copy
 SCRIPTS=(
     "aws-add-user-to-group.sh"
-    "aws-attach-group-bucket-policy.sh"
     "aws-clear-group-policies.sh"
     "aws-clear-user-policies.sh"
     "aws-create-bucket-policy.sh"
