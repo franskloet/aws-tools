@@ -44,7 +44,7 @@ alias aws-current='echo "Current AWS Profile: ${AWS_PROFILE:-default}"'
 alias aws-profiles='echo "Available AWS profiles:" && grep "^\[profile " ~/.aws/config 2>/dev/null | sed "s/^\[profile \(.*\)\]/  - \1/" && [ -f ~/.aws/credentials ] && grep "^\[default\]" ~/.aws/credentials &>/dev/null && echo "  - default"'
 
 # Function to show current AWS identity (Ceph-compatible)
-aws_whoami() {
+aws-whoami() {
     echo "Current AWS Profile: ${AWS_PROFILE:-default}"
     echo ""
     
@@ -163,7 +163,7 @@ echo "  aws-delete-user <username> [profile]  - Delete IAM user and remove profi
 echo "  aws-switch-profile <profile>          - Switch to different AWS profile"
 echo "  aws-current                           - Show current AWS profile"
 echo "  aws-profiles                          - List all configured profiles"
-echo "  aws_whoami                            - Show current AWS identity"
+echo "  aws-whoami                            - Show current AWS identity"
 echo "  aws-attach-policy <user> <arn|name>  - Attach policy to user"
 echo "  aws-detach-user-policy <user> <arn>  - Detach policy from user"
 echo "  aws-clear-user-policies <user>       - Remove all policies from user"
