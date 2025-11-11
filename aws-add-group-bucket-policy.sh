@@ -27,6 +27,9 @@ if [ -z "$1" ] || [ -z "$2" ]; then
     echo "  # Full access to specific prefix in bucket"
     echo "  $0 researchers shared-data experiments/"
     echo ""
+    echo "  # Read-only access to entire bucket with default tenant"
+    echo "  $0 mns_pi groups \"\" \"\" read"
+    echo ""
     echo "  # Read-only access to prefix with custom tenant"
     echo "  $0 analysts data-bucket reports/ project_alpha read"
     echo ""
@@ -92,14 +95,14 @@ esac
 if [ -n "$PREFIX" ]; then
     # Prefix-specific policy
     RESOURCES="
-        \"arn:aws:s3:${TENANT}:${TENANT}:${BUCKET_NAME}\",
-        \"arn:aws:s3:${TENANT}:${TENANT}:${BUCKET_NAME}/${PREFIX}*\""
+        \"arn:aws:s3::${TENANT}:${BUCKET_NAME}\",
+        \"arn:aws:s3::${TENANT}:${BUCKET_NAME}/${PREFIX}*\""
     RESOURCE_DESC="bucket '$BUCKET_NAME' prefix '$PREFIX'"
 else
     # Bucket-wide policy
     RESOURCES="
-        \"arn:aws:s3:${TENANT}:${TENANT}:${BUCKET_NAME}\",
-        \"arn:aws:s3:${TENANT}:${TENANT}:${BUCKET_NAME}/*\""
+        \"arn:aws:s3::${TENANT}:${BUCKET_NAME}\",
+        \"arn:aws:s3::${TENANT}:${BUCKET_NAME}/*\""
     RESOURCE_DESC="bucket '$BUCKET_NAME'"
 fi
 

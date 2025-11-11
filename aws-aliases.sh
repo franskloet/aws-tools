@@ -26,6 +26,21 @@ alias aws-create-group-policy="$AWS_SCRIPTS_DIR/aws-create-group-policy.sh"
 # Alias to create user policy (bucket/prefix access)
 alias aws-create-user-policy="$AWS_SCRIPTS_DIR/aws-create-user-policy.sh"
 
+# Alias to generate user policy JSON
+alias aws-generate-user-policy="$AWS_SCRIPTS_DIR/aws-generate-user-policy.sh"
+
+# Alias to attach user policy
+alias aws-attach-user-policy="$AWS_SCRIPTS_DIR/aws-attach-user-policy.sh"
+
+# Alias to remove user inline policy
+alias aws-remove-user-inline-policy="$AWS_SCRIPTS_DIR/aws-remove-user-inline-policy.sh"
+
+# S3 bucket and prefix management
+alias aws-mb="$AWS_SCRIPTS_DIR/aws-mb.sh"
+alias aws-md="$AWS_SCRIPTS_DIR/aws-md.sh"
+alias aws-ls="$AWS_SCRIPTS_DIR/aws-ls.sh"
+alias aws-cp="$AWS_SCRIPTS_DIR/aws-cp.sh"
+
 # Aliases for group management
 alias aws-create-group="$AWS_SCRIPTS_DIR/aws-create-group.sh"
 alias aws-delete-group="$AWS_SCRIPTS_DIR/aws-delete-group.sh"
@@ -36,7 +51,7 @@ alias aws-detach-group-policy="$AWS_SCRIPTS_DIR/aws-detach-group-policy.sh"
 alias aws-list-group-policies="$AWS_SCRIPTS_DIR/aws-list-group-policies.sh"
 alias aws-clear-user-policies="$AWS_SCRIPTS_DIR/aws-clear-user-policies.sh"
 alias aws-clear-group-policies="$AWS_SCRIPTS_DIR/aws-clear-group-policies.sh"
-alias aws-restrict-group-to-bucket="$AWS_SCRIPTS_DIR/aws-restrict-group-to-bucket.sh"
+alias aws-add-group-bucket-policy="$AWS_SCRIPTS_DIR/aws-add-group-bucket-policy.sh"
 
 # Quick alias to show current AWS profile
 alias aws-current='echo "Current AWS Profile: ${AWS_PROFILE:-default}"'
@@ -176,9 +191,17 @@ echo "  aws-detach-group-policy <group> <arn> - Detach policy from group"
 echo "  aws-clear-group-policies <group>     - Remove all policies from group"
 echo "  aws-create-group-policy <group> [tenant] - Create default S3 policy for group"
 echo "  aws-create-user-policy <user> <bucket> [prefixes] [tenant] - Create bucket/prefix policy for user"
+echo "  aws-generate-user-policy <user> <bucket> [prefixes] - Generate policy JSON for user"
+echo "  aws-attach-user-policy <user> <policy-file> - Attach inline policy from file to user"
+echo "  aws-remove-user-inline-policy <user> <policy-name> - Remove inline policy from user"
+echo "  aws-add-group-bucket-policy <group> <bucket> [prefixes] - Add bucket access policy to group"
 echo "  aws-list-group-policies <group>      - List all policies for a group"
 echo "  aws-add-user-to-group <user> <group> - Add user to group"
 echo "  aws-list-groups [group]              - List all groups or group details"
+echo "  aws-mb <bucket> [acl]                - Create S3 bucket (make bucket)"
+echo "  aws-md <bucket> <prefix>             - Create empty prefix/directory in bucket"
+echo "  aws-ls [bucket[/prefix]] [options]   - List S3 buckets or bucket contents"
+echo "  aws-cp <source> <dest> [options]     - Copy files to/from S3 (supports wildcards with --recursive)"
 }
 
 # Show available commands only once per day

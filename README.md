@@ -147,6 +147,7 @@ aws-create-group-policy developers project_x  # Custom tenant
 # Add bucket/prefix policy to group
 aws-add-group-bucket-policy developers project-data                    # Full access to bucket
 aws-add-group-bucket-policy researchers shared-data experiments/      # Access to prefix
+aws-add-group-bucket-policy mns_pi groups "" "" read                   # Read-only access to entire bucket
 aws-add-group-bucket-policy analysts data-bucket reports/ project_x read  # Read-only with custom tenant
 
 # Add user to group
@@ -175,6 +176,34 @@ aws-create-user-policy bob research experiment1/ tenant=project_alpha
 # - Full bucket access: aws-create-user-policy alice mydata
 # - Prefix access: aws-create-user-policy bob files home/bob/ shared/
 ```
+
+### S3 Bucket and Object Management
+
+```bash
+# Create a bucket
+aws-mb my-bucket                    # Create private bucket
+aws-mb public-data public-read      # Create public-read bucket
+
+# Create empty prefix/directory placeholder
+aws-md my-bucket users/             # Create users/ directory
+aws-md data-bucket projects/alpha/  # Create nested directory
+
+# List buckets and contents
+aws-ls                              # List all buckets
+aws-ls my-bucket                    # List bucket contents
+aws-ls my-bucket/users/             # List prefix contents
+aws-ls my-bucket --recursive        # List all objects recursively
+aws-ls my-bucket --human-readable --recursive  # With human-readable sizes
+
+# Copy files to/from S3
+aws-cp myfile.txt my-bucket/uploads/           # Upload file
+aws-cp my-bucket/data.csv ./data/              # Download file
+aws-cp bucket1/files/ bucket2/backup/          # Copy between S3 locations
+aws-cp ./local-dir/ my-bucket/remote/ --recursive  # Upload directory
+aws-cp my-bucket/logs/ ./logs/ --recursive --exclude '*' --include '*.log'  # Download with wildcard
+```
+
+**Note**: These S3 wrapper commands automatically handle the `s3://` prefix and provide user-friendly error messages for CEPH access denied errors.
 
 ### Utility Commands
 
@@ -325,8 +354,8 @@ aws-create-group developers
 # Apply default S3 list policy to group
 aws-create-group-policy developers
 
-# Give the group access to a shared bucket
-aws-add-group-bucket-policy developers shared-data read
+# Give the group read-only access to a shared bucket (using default tenant)
+aws-add-group-bucket-policy developers shared-data "" "" read
 
 # Add users to the group
 aws-add-user-to-group alice developers
