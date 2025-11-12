@@ -1,16 +1,44 @@
 #!/bin/bash
 # AWS User Creation and Configuration Script
-# Usage: ./aws-create-user.sh <username> [profile-name]
+# Usage: ./aws-create-user.sh [OPTIONS] <username> [profile-name]
 
 set -e
+
+FORCE_KEY=0
+
+# Parse options
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -f|--force-key)
+            FORCE_KEY=1
+            shift
+            ;;
+        -*)
+            echo "Unknown option: $1"
+            echo "Usage: $0 [OPTIONS] <username> [profile-name]"
+            echo "Options:"
+            echo "  -f, --force-key    Create new access key even if user exists"
+            echo "Arguments:"
+            echo "  username           AWS IAM username to create"
+            echo "  profile-name       AWS CLI profile name (defaults to username)"
+            exit 1
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
 
 USERNAME="$1"
 PROFILE_NAME="${2:-$USERNAME}"
 
 if [ -z "$USERNAME" ]; then
-    echo "Usage: $0 <username> [profile-name]"
-    echo "  username: AWS IAM username to create"
-    echo "  profile-name: AWS CLI profile name (defaults to username)"
+    echo "Usage: $0 [OPTIONS] <username> [profile-name]"
+    echo "Options:"
+    echo "  -f, --force-key    Create new access key even if user exists"
+    echo "Arguments:"
+    echo "  username           AWS IAM username to create"
+    echo "  profile-name       AWS CLI profile name (defaults to username)"
     exit 1
 fi
 
@@ -26,27 +54,64 @@ ORIG_AWS_PROFILE="${AWS_PROFILE:-}"
 export AWS_PROFILE=default
 
 # Check if user already exists
+USER_EXISTS=0
 echo "Checking if user exists: $USERNAME"
 if aws iam get-user --user-name "$USERNAME" &>/dev/null; then
+    USER_EXISTS=1
     echo "User '$USERNAME' already exists"
     
-    # In non-interactive mode (AUTO_CONFIRM=1), automatically create new key
-    if [ "${AUTO_CONFIRM:-0}" = "1" ]; then
-        echo "Auto-confirming: Creating new access key for existing user"
+    # Only create new access key if --force-key flag is set
+    if [ "$FORCE_KEY" = "1" ]; then
+        echo "--force-key flag set: Creating new access key for existing user"
+        CREATE_KEY=1
     else
-        read -p "Create new access key for existing user? (y/N) " -n 1 -r
-        echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            echo "Aborted. User exists but no new access key created."
-            exit 1
+        echo "User already exists. Use --force-key flag to create a new access key."
+        CREATE_KEY=0
+    fi
+    
+    if [ "$CREATE_KEY" = "1" ]; then
+        # Delete all existing access keys for this user
+        echo "Checking for existing access keys..."
+        EXISTING_KEYS=$(aws iam list-access-keys --user-name "$USERNAME" --output json | jq -r '.AccessKeyMetadata[].AccessKeyId')
+        
+        if [ -n "$EXISTING_KEYS" ]; then
+            echo "Deleting existing access keys..."
+            while IFS= read -r key_id; do
+                if [ -n "$key_id" ]; then
+                    echo "  Deleting access key: $key_id"
+                    aws iam delete-access-key --user-name "$USERNAME" --access-key-id "$key_id"
+                fi
+            done <<< "$EXISTING_KEYS"
         fi
     fi
 else
     echo "Creating IAM user: $USERNAME"
     aws iam create-user --user-name "$USERNAME"
+    CREATE_KEY=1
 fi
 
-echo "Creating access key for user: $USERNAME"
+if [ "$CREATE_KEY" = "1" ]; then
+    echo "Creating access key for user: $USERNAME"
+    ACCESS_KEY_OUTPUT=$(aws iam create-access-key --user-name "$USERNAME" --output json)
+else
+    echo "Skipping access key creation. User already exists."
+    
+    # Restore original profile and exit
+    if [ -n "$ORIG_AWS_PROFILE" ]; then
+        export AWS_PROFILE="$ORIG_AWS_PROFILE"
+    else
+        unset AWS_PROFILE
+    fi
+    
+    echo ""
+    echo "✓ User '$USERNAME' already exists"
+    echo "✓ No new access key created"
+    echo ""
+    echo "To create a new access key, run:"
+    echo "  $0 --force-key $USERNAME"
+    exit 0
+fi
+
 ACCESS_KEY_OUTPUT=$(aws iam create-access-key --user-name "$USERNAME" --output json)
 
 ACCESS_KEY_ID=$(echo "$ACCESS_KEY_OUTPUT" | jq -r '.AccessKey.AccessKeyId')
@@ -70,7 +135,11 @@ aws_secret_access_key = $SECRET_ACCESS_KEY
 EOF
     echo "Added credentials to $AWS_CREDENTIALS_FILE"
 else
-    echo "Warning: Profile '$PROFILE_NAME' already exists in credentials file"
+    echo "Updating existing profile '$PROFILE_NAME' in credentials file"
+    # Use sed to update the access key and secret key in the existing profile
+    sed -i "/^\[$PROFILE_NAME\]/,/^\[/s|^aws_access_key_id = .*|aws_access_key_id = $ACCESS_KEY_ID|" "$AWS_CREDENTIALS_FILE"
+    sed -i "/^\[$PROFILE_NAME\]/,/^\[/s|^aws_secret_access_key = .*|aws_secret_access_key = $SECRET_ACCESS_KEY|" "$AWS_CREDENTIALS_FILE"
+    echo "Updated credentials in $AWS_CREDENTIALS_FILE"
 fi
 
 # Add to config file
